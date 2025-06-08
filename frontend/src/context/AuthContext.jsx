@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
         try {
             setError(null);
             const response = await axios.get('/user');
-            setUser(response.data);
+            setUser(response.data.data.user);
         } catch (error) {
             console.error('Auth check failed:', error);
             setUser(null);
@@ -44,11 +44,16 @@ export const AuthProvider = ({ children }) => {
         try {
             setError(null);
             const response = await axios.post('/login', { email, password });
-            const { token } = response.data.data.authorization;
-            localStorage.setItem('token', token);
-            setUser(response.data.data.user);
-            return { success: true };
+            
+            if (response.data.status === 'success') {
+                const { token } = response.data.data;
+                localStorage.setItem('token', token);
+                setUser(response.data.data.user);
+                return { success: true };
+            }
+            return { success: false, message: response.data.message };
         } catch (error) {
+            console.error('Login error:', error);
             const errorMessage = error.response?.data?.message || 'Login failed';
             setError(errorMessage);
             return { success: false, message: errorMessage };
@@ -58,7 +63,6 @@ export const AuthProvider = ({ children }) => {
     const register = async (name, email, password, password_confirmation) => {
         try {
             setError(null);
-            // Log the registration data
             console.log('Registration data:', {
                 name,
                 email,
@@ -76,7 +80,7 @@ export const AuthProvider = ({ children }) => {
             console.log('Registration response:', response.data);
             
             if (response.data.status === 'success') {
-                const { token } = response.data.data.authorization;
+                const { token } = response.data.data;
                 localStorage.setItem('token', token);
                 setUser(response.data.data.user);
                 return { success: true };
@@ -98,7 +102,6 @@ export const AuthProvider = ({ children }) => {
             // Handle validation errors
             if (error.response.status === 422) {
                 const validationErrors = error.response.data.errors;
-                console.log('Validation errors:', validationErrors);
                 const errorMessage = Object.values(validationErrors)
                     .flat()
                     .join(', ');

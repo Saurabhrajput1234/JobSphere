@@ -1,153 +1,130 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import './Register.css';
+import '../styles/global.css';
+import '../styles/animations.css';
 
 const Register = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [password_confirmation, setPasswordConfirmation] = useState('');
+    const [passwordConfirmation, setPasswordConfirmation] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const { register } = useAuth();
     const navigate = useNavigate();
-
-    const validateForm = () => {
-        if (!name.trim()) {
-            setError('Name is required');
-            return false;
-        }
-        if (!email.trim()) {
-            setError('Email is required');
-            return false;
-        }
-        if (!email.includes('@')) {
-            setError('Please enter a valid email address');
-            return false;
-        }
-        if (password !== password_confirmation) {
-            setError('Passwords do not match');
-            return false;
-        }
-        if (password.length < 8) {
-            setError('Password must be at least 8 characters long');
-            return false;
-        }
-        return true;
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        
-        if (!validateForm()) {
-            return;
-        }
-
-        setLoading(true);
+        setIsLoading(true);
 
         try {
-            console.log('Submitting registration form with data:', {
-                name,
-                email,
-                password,
-                password_confirmation
-            });
-
-            const response = await register(name, email, password, password_confirmation);
-            console.log('Registration response:', response);
-
+            const response = await register(name, email, password, passwordConfirmation);
             if (response.success) {
                 navigate('/dashboard');
             } else {
-                setError(response.message || 'Registration failed. Please try again.');
+                setError(response.error || 'Registration failed. Please try again.');
             }
         } catch (err) {
-            console.error('Registration error:', err);
-            if (err.response?.data?.message) {
-                setError(err.response.data.message);
-            } else if (err.response?.data?.error) {
-                setError(err.response.data.error);
-            } else if (err.response?.data?.errors) {
-                // Handle Laravel validation errors
-                const errorMessages = Object.values(err.response.data.errors).flat();
-                setError(errorMessages.join(', '));
-            } else {
-                setError('An error occurred during registration. Please try again.');
-            }
+            setError(err.message || 'An error occurred during registration.');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="register-container">
-            <div className="register-form">
-                <h1 className="register-title">Register</h1>
-                {error && <div className="register-error">{error}</div>}
-                <form onSubmit={handleSubmit}>
-                    <div className="register-form-group">
-                        <label className="register-label" htmlFor="name">Name</label>
+        <div className="container animate-fade-in">
+            <div className="card">
+                <h1 className="title">Create Account</h1>
+                <p className="text-gray-600 mb-6">Join us and start your journey</p>
+
+                {error && (
+                    <div className="error mb-4">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="form-group">
+                        <label htmlFor="name" className="label">Full Name</label>
                         <input
-                            id="name"
                             type="text"
-                            className="register-input"
+                            id="name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
+                            className="input"
+                            placeholder="Enter your full name"
                             required
-                            placeholder="Enter your name"
                         />
                     </div>
-                    <div className="register-form-group">
-                        <label className="register-label" htmlFor="email">Email</label>
+
+                    <div className="form-group">
+                        <label htmlFor="email" className="label">Email</label>
                         <input
-                            id="email"
                             type="email"
-                            className="register-input"
+                            id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            required
+                            className="input"
                             placeholder="Enter your email"
+                            required
                         />
                     </div>
-                    <div className="register-form-group">
-                        <label className="register-label" htmlFor="password">Password</label>
+
+                    <div className="form-group">
+                        <label htmlFor="password" className="label">Password</label>
                         <input
-                            id="password"
                             type="password"
-                            className="register-input"
+                            id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            className="input"
+                            placeholder="Create a password"
                             required
-                            placeholder="Enter your password"
-                            minLength="8"
                         />
                     </div>
-                    <div className="register-form-group">
-                        <label className="register-label" htmlFor="password_confirmation">Confirm Password</label>
+
+                    <div className="form-group">
+                        <label htmlFor="passwordConfirmation" className="label">Confirm Password</label>
                         <input
-                            id="password_confirmation"
                             type="password"
-                            className="register-input"
-                            value={password_confirmation}
+                            id="passwordConfirmation"
+                            value={passwordConfirmation}
                             onChange={(e) => setPasswordConfirmation(e.target.value)}
-                            required
+                            className="input"
                             placeholder="Confirm your password"
-                            minLength="8"
+                            required
                         />
                     </div>
-                    <button 
-                        type="submit" 
-                        className="register-button"
-                        disabled={loading}
+
+                    <button
+                        type="submit"
+                        className="button w-full"
+                        disabled={isLoading}
                     >
-                        {loading ? 'Registering...' : 'Register'}
+                        {isLoading ? (
+                            <span className="flex items-center justify-center">
+                                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Creating account...
+                            </span>
+                        ) : (
+                            'Create Account'
+                        )}
                     </button>
                 </form>
-                <Link to="/login" className="register-link">
-                    Already have an account? Login
-                </Link>
+
+                <div className="mt-6 text-center">
+                    <p className="text-gray-600">
+                        Already have an account?{' '}
+                        <Link to="/login" className="link">
+                            Sign in
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

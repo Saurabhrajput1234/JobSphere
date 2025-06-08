@@ -1,70 +1,102 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import './Login.css';
+import '../styles/global.css';
+import '../styles/animations.css';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        setLoading(true);
+        setIsLoading(true);
 
         try {
-            await login(email, password);
-            navigate('/dashboard');
+            const response = await login(email, password);
+            if (response.success) {
+                navigate('/dashboard');
+            } else {
+                setError(response.error || 'Login failed. Please try again.');
+            }
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to login');
+            setError(err.message || 'An error occurred during login.');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="login-container">
-            <div className="login-form">
-                <h1 className="login-title">Login</h1>
-                {error && <div className="login-error">{error}</div>}
-                <form onSubmit={handleSubmit}>
-                    <div className="login-form-group">
-                        <label className="login-label" htmlFor="email">Email</label>
+        <div className="container animate-fade-in">
+            <div className="card">
+                <h1 className="title">Welcome Back</h1>
+                <p className="text-gray-600 mb-6">Please sign in to your account</p>
+                
+                {error && (
+                    <div className="error mb-4">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="form-group">
+                        <label htmlFor="email" className="label">Email</label>
                         <input
-                            id="email"
                             type="email"
-                            className="login-input"
+                            id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            className="input"
+                            placeholder="Enter your email"
                             required
                         />
                     </div>
-                    <div className="login-form-group">
-                        <label className="login-label" htmlFor="password">Password</label>
+
+                    <div className="form-group">
+                        <label htmlFor="password" className="label">Password</label>
                         <input
-                            id="password"
                             type="password"
-                            className="login-input"
+                            id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            className="input"
+                            placeholder="Enter your password"
                             required
                         />
                     </div>
-                    <button 
-                        type="submit" 
-                        className="login-button"
-                        disabled={loading}
+
+                    <button
+                        type="submit"
+                        className="button w-full"
+                        disabled={isLoading}
                     >
-                        {loading ? 'Logging in...' : 'Login'}
+                        {isLoading ? (
+                            <span className="flex items-center justify-center">
+                                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Signing in...
+                            </span>
+                        ) : (
+                            'Sign In'
+                        )}
                     </button>
                 </form>
-                <Link to="/register" className="login-link">
-                    Don't have an account? Register
-                </Link>
+
+                <div className="mt-6 text-center">
+                    <p className="text-gray-600">
+                        Don't have an account?{' '}
+                        <Link to="/register" className="link">
+                            Sign up
+                        </Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

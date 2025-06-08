@@ -1,0 +1,89 @@
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Card hover effect */
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Button hover effect */
+.button {
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+/* Input focus effect */
+.input {
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus {
+    transform: translateY(-1px);
+}
+
+/* Link hover effect */
+.link {
+    transition: color 0.2s, transform 0.2s;
+}
+
+.link:hover {
+    transform: translateY(-1px);
+}
+
+/* Error message animation */
+.error {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Success message animation */
+.success {
+    animation: fadeIn 0.3s ease-out;
+} 

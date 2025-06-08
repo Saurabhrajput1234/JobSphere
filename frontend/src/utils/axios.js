@@ -5,8 +5,7 @@ const instance = axios.create({
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-    },
-    withCredentials: true
+    }
 });
 
 // Add a request interceptor
@@ -19,27 +18,48 @@ instance.interceptors.request.use(
         return config;
     },
     (error) => {
+        console.error('Request error:', error);
         return Promise.reject(error);
     }
 );
 
 // Add a response interceptor
 instance.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Log successful responses for debugging
+        console.log('Response:', response.data);
+        return response;
+    },
     (error) => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-        }
+        console.error('Response error:', error.response?.data || error.message);
+
         // Handle network errors
         if (!error.response) {
             console.error('Network Error:', error.message);
             return Promise.reject(new Error('Network error. Please check your connection.'));
         }
+
+        // Handle unauthorized errors
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+            return Promise.reject(new Error('Session expired. Please login again.'));
+        }
+
         // Handle validation errors
         if (error.response?.status === 422) {
-            return Promise.reject(error.response.data);
+            const errors = error.response.data.errors;
+            const errorMessage = Object.values(errors)
+                .flat()
+                .join(', ');
+            return Promise.reject(new Error(errorMessage));
         }
+
+        // Handle server errors
+        if (error.response?.status === 500) {
+            return Promise.reject(new Error(error.response.data.message || 'Server error occurred'));
+        }
+
         return Promise.reject(error);
     }
 );
