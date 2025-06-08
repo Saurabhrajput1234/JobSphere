@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: 'http://localhost:8000/api',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -18,7 +18,6 @@ instance.interceptors.request.use(
         return config;
     },
     (error) => {
-        console.error('Request error:', error);
         return Promise.reject(error);
     }
 );
@@ -26,13 +25,9 @@ instance.interceptors.request.use(
 // Add a response interceptor
 instance.interceptors.response.use(
     (response) => {
-        // Log successful responses for debugging
-        console.log('Response:', response.data);
         return response;
     },
     (error) => {
-        console.error('Response error:', error.response?.data || error.message);
-
         // Handle network errors
         if (!error.response) {
             console.error('Network Error:', error.message);

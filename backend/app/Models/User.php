@@ -25,6 +25,9 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'last_login_at',
         'last_login_ip',
+        'role', // 'job_seeker', 'recruiter', 'admin'
+        'company_name', // for recruiters
+        'company_description', // for recruiters
     ];
 
     /**
@@ -80,5 +83,37 @@ class User extends Authenticatable implements JWTSubject
             'last_login_at' => now(),
             'last_login_ip' => $ip,
         ]);
+    }
+
+    // Role-based helper methods
+    public function isJobSeeker(): bool
+    {
+        return $this->role === 'job_seeker';
+    }
+
+    public function isRecruiter(): bool
+    {
+        return $this->role === 'recruiter';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    // Relationships
+    public function jobs()
+    {
+        return $this->hasMany(Job::class, 'recruiter_id');
+    }
+
+    public function applications()
+    {
+        return $this->hasMany(Application::class, 'job_seeker_id');
+    }
+
+    public function resume()
+    {
+        return $this->hasOne(Resume::class, 'job_seeker_id');
     }
 }

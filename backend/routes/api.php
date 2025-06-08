@@ -4,6 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\JobController;
+use App\Http\Controllers\ResumeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,7 +31,20 @@ Route::get('/users', [PublicController::class, 'getAllUsers']);
 
 // Protected routes
 Route::middleware('auth:api')->group(function () {
+    // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/refresh', [AuthController::class, 'refresh']);
-    Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user', [AuthController::class, 'update']);
+
+    // Job routes
+    Route::apiResource('jobs', JobController::class);
+    Route::get('jobs/search', [JobController::class, 'index']);
+
+    // Application routes
+    Route::apiResource('applications', ApplicationController::class);
+    Route::put('applications/{application}/status', [ApplicationController::class, 'update']);
+
+    // Resume routes
+    Route::apiResource('resumes', ResumeController::class);
+    Route::get('resumes/{resume}/download', [ResumeController::class, 'download']);
 });
