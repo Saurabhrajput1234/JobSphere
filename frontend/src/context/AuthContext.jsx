@@ -1,0 +1,154 @@
+import { createContext, useContext, useState, useEffect } from 'react';
+import axios from '../utils/axios';
+
+const AuthContext = createContext(null);
+
+const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+};
+
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            checkAuth();
+        } else {
+            setLoading(false);
+        }
+    }, []);
+
+    const checkAuth = async () => {
+        try {
+            setError(null);
+            const response = await axios.get('/user');
+            setUser(response.data);
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            setUser(null);
+            localStorage.removeItem('token');
+            setError(error.response?.data?.message || 'Authentication failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const login = async (email, password) => {
+        try {
+            setError(null);
+            const response = await axios.post('/login', { email, password });
+            const { token } = response.data.data.authorization;
+            localStorage.setItem('token', token);
+            setUser(response.data.data.user);
+            return { success: true };
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Login failed';
+            setError(errorMessage);
+            return { success: false, message: errorMessage };
+        }
+    };
+
+    const register = async (name, email, password, password_confirmation) => {
+        try {
+            setError(null);
+            // Log the registration data
+            console.log('Registration data:', {
+                name,
+                email,
+                password,
+                password_confirmation
+            });
+
+            const response = await axios.post('/register', {
+                name,
+                email,
+                password,
+                password_confirmation
+            });
+            
+            console.log('Registration response:', response.data);
+            
+            if (response.data.status === 'success') {
+                const { token } = response.data.data.authorization;
+                localStorage.setItem('token', token);
+                setUser(response.data.data.user);
+                return { success: true };
+            }
+            return { success: false, message: response.data.message };
+        } catch (error) {
+            console.error('Registration error details:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message
+            });
+
+            // Handle network errors
+            if (!error.response) {
+                setError('Network error. Please check your connection.');
+                return { success: false, message: 'Network error. Please check your connection.' };
+            }
+
+            // Handle validation errors
+            if (error.response.status === 422) {
+                const validationErrors = error.response.data.errors;
+                console.log('Validation errors:', validationErrors);
+                const errorMessage = Object.values(validationErrors)
+                    .flat()
+                    .join(', ');
+                setError(errorMessage);
+                return { success: false, message: errorMessage };
+            }
+
+            // Handle server errors
+            if (error.response.status === 500) {
+                const errorMessage = error.response.data.message || 'Server error occurred';
+                setError(errorMessage);
+                return { success: false, message: errorMessage };
+            }
+
+            // Handle other errors
+            const errorMessage = error.response.data?.message || 'Registration failed';
+            setError(errorMessage);
+            return { success: false, message: errorMessage };
+        }
+    };
+
+    const logout = async () => {
+        try {
+            setError(null);
+            await axios.post('/logout');
+            localStorage.removeItem('token');
+            setUser(null);
+        } catch (error) {
+            console.error('Logout error:', error);
+            localStorage.removeItem('token');
+            setUser(null);
+            setError('Logout failed');
+        }
+    };
+
+    const value = {
+        user,
+        loading,
+        error,
+        login,
+        register,
+        logout,
+        setError
+    };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export { useAuth }; 
