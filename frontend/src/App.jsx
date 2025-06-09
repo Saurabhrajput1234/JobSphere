@@ -26,6 +26,9 @@ import CompanyProfile from './components/company/CompanyProfile';
 // Resume Component
 import ResumeUpload from './components/resumes/ResumeUpload';
 
+// Profile Component
+import UserProfile from './components/profile/UserProfile';
+
 // Home Component
 import HomePage from './components/home/HomePage';
 
@@ -67,6 +70,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <UserDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <UserProfile />
                   </ProtectedRoute>
                 }
               />

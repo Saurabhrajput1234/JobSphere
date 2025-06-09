@@ -53,7 +53,16 @@ const Register = () => {
         return;
       }
 
-      const result = await register(formData);
+      const result = await register(
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.password_confirmation,
+        formData.role,
+        formData.company_name,
+        formData.company_description
+      );
+
       if (result.success) {
         // Check for pending job application
         const pendingJobId = sessionStorage.getItem('pendingJobApplication');
@@ -69,10 +78,10 @@ const Register = () => {
           }
         }
       } else {
-        setError(result.error);
+        setError(result.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setError('An error occurred during registration');
+      setError(err.message || 'An error occurred during registration');
     } finally {
       setLoading(false);
     }

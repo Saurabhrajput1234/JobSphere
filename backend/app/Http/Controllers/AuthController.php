@@ -23,7 +23,7 @@ class AuthController extends Controller
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|min:8|confirmed',
                 'role' => 'required|string|in:job_seeker,recruiter',
-                'company_name' => 'required_if:role,recruiter|string|max:255',
+                'company_name' => 'required_if:role,recruiter|nullable|string|max:255',
                 'company_description' => 'nullable|string',
             ]);
 
@@ -38,14 +38,20 @@ class AuthController extends Controller
 
             Log::info('Creating new user: ' . $request->email);
 
-            $user = User::create([
+            $userData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'role' => $request->role,
-                'company_name' => $request->company_name,
-                'company_description' => $request->company_description,
-            ]);
+            ];
+
+            // Only add company fields if role is recruiter
+            if ($request->role === 'recruiter') {
+                $userData['company_name'] = $request->company_name;
+                $userData['company_description'] = $request->company_description;
+            }
+
+            $user = User::create($userData);
 
             Log::info('User created: ID ' . $user->id);
 

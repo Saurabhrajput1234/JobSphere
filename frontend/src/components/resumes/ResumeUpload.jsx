@@ -8,13 +8,16 @@ import {
   CircularProgress,
   Alert,
   Container,
+  TextField,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useAuth } from '../../contexts/AuthContext';
+import axios from '../../utils/axios';
 
-const ResumeUpload = () => {
+const ResumeUpload = ({ onSuccess }) => {
   const { user } = useAuth();
   const [file, setFile] = useState(null);
+  const [title, setTitle] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -23,8 +26,8 @@ const ResumeUpload = () => {
     const selectedFile = acceptedFiles[0];
     if (selectedFile) {
       // Check file type
-      if (!selectedFile.type.includes('pdf') && !selectedFile.type.includes('doc') && !selectedFile.type.includes('docx')) {
-        setError('Please upload a PDF or Word document');
+      if (!selectedFile.type.includes('pdf')) {
+        setError('Please upload a PDF file');
         return;
       }
       // Check file size (max 5MB)
@@ -41,14 +44,15 @@ const ResumeUpload = () => {
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
     maxFiles: 1,
   });
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file || !title) {
+      setError('Please provide both a title and a file');
+      return;
+    }
 
     setUploading(true);
     setError('');
@@ -56,26 +60,39 @@ const ResumeUpload = () => {
 
     const formData = new FormData();
     formData.append('resume', file);
+    formData.append('title', title);
+    formData.append('is_default', true);
 
     try {
-      const response = await fetch('/api/resumes/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
+      console.log('Uploading resume:', {
+        title,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
       });
 
-      const data = await response.json();
+      const response = await axios.post('/resumes', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      if (response.ok) {
+      console.log('Upload response:', response.data);
+
+      if (response.data) {
         setSuccess('Resume uploaded successfully');
         setFile(null);
-      } else {
-        setError(data.message || 'Failed to upload resume');
+        setTitle('');
+        if (onSuccess) {
+          onSuccess();
+        }
       }
     } catch (err) {
-      setError('An error occurred while uploading the resume');
+      console.error('Upload error:', err);
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.errors?.resume?.[0] || 
+                          'Failed to upload resume';
+      setError(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -110,6 +127,16 @@ const ResumeUpload = () => {
           </Alert>
         )}
 
+        <TextField
+          fullWidth
+          label="Resume Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          margin="normal"
+          required
+          helperText="Give your resume a descriptive title"
+        />
+
         <Box
           {...getRootProps()}
           sx={{
@@ -121,6 +148,7 @@ const ResumeUpload = () => {
             cursor: 'pointer',
             bgcolor: isDragActive ? 'action.hover' : 'background.paper',
             mb: 2,
+            mt: 2,
           }}
         >
           <input {...getInputProps()} />
@@ -132,7 +160,7 @@ const ResumeUpload = () => {
             or click to select a file
           </Typography>
           <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
-            Supported formats: PDF, DOC, DOCX (Max size: 5MB)
+            Supported format: PDF (Max size: 5MB)
           </Typography>
         </Box>
 
@@ -150,7 +178,7 @@ const ResumeUpload = () => {
         <Button
           variant="contained"
           onClick={handleUpload}
-          disabled={!file || uploading}
+          disabled={!file || !title || uploading}
           startIcon={uploading ? <CircularProgress size={20} /> : null}
         >
           {uploading ? 'Uploading...' : 'Upload Resume'}

@@ -48,7 +48,7 @@ const Login = () => {
         return;
       }
 
-      const result = await login(formData);
+      const result = await login(formData.email, formData.password);
       if (result.success) {
         // Check for pending job application
         const pendingJobId = sessionStorage.getItem('pendingJobApplication');
@@ -59,10 +59,10 @@ const Login = () => {
           navigate('/dashboard');
         }
       } else {
-        setError(result.error);
+        setError(result.message || 'Login failed. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred during login');
+      setError(err.message || 'An error occurred during login');
     } finally {
       setLoading(false);
     }

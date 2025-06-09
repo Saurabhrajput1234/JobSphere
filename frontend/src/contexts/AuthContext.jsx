@@ -17,105 +17,91 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    checkAuth();
+    const token = localStorage.getItem('token');
+    if (token) {
+      checkAuth();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const response = await axios.get('/user');
-        setUser(response.data.data.user);
-      }
+      setError(null);
+      const response = await axios.get('/user');
+      setUser(response.data.data.user);
     } catch (error) {
       console.error('Auth check failed:', error);
+      setUser(null);
       localStorage.removeItem('token');
+      setError(error.response?.data?.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (formData) => {
+  const login = async (email, password) => {
     try {
       setError(null);
-      console.log('Login data:', formData);
-
-      const response = await axios.post('/login', formData);
+      const response = await axios.post('/login', { email, password });
       console.log('Login response:', response.data);
       
       if (response.data.status === 'success') {
-        const { token, user } = response.data.data;
+        const { token, user } = response.data;
         localStorage.setItem('token', token);
         setUser(user);
         return { success: true };
       }
-      return { success: false, error: response.data.message };
+      return { success: false, message: response.data.message };
     } catch (error) {
       console.error('Login error:', error);
-      
-      // Handle network errors
-      if (!error.response) {
-        const errorMessage = 'Network error. Please check your connection.';
-        setError(errorMessage);
-        return { success: false, error: errorMessage };
-      }
-
-      // Handle validation errors
-      if (error.response.status === 422) {
-        const validationErrors = error.response.data.errors;
-        const errorMessage = Object.values(validationErrors)
-          .flat()
-          .join(', ');
-        setError(errorMessage);
-        return { success: false, error: errorMessage };
-      }
-
-      // Handle authentication errors
-      if (error.response.status === 401) {
-        const errorMessage = error.response.data.message || 'Invalid credentials';
-        setError(errorMessage);
-        return { success: false, error: errorMessage };
-      }
-
-      // Handle server errors
-      if (error.response.status === 500) {
-        const errorMessage = error.response.data.message || 'Server error occurred';
-        setError(errorMessage);
-        return { success: false, error: errorMessage };
-      }
-
-      // Handle other errors
-      const errorMessage = error.response.data?.message || 'Login failed';
+      const errorMessage = error.response?.data?.message || 'Login failed';
       setError(errorMessage);
-      return { success: false, error: errorMessage };
+      return { success: false, message: errorMessage };
     }
   };
 
-  const register = async (formData) => {
+  const register = async (name, email, password, password_confirmation, role, company_name, company_description) => {
     try {
       setError(null);
-      console.log('Registration data:', formData);
+      const registrationData = {
+        name,
+        email,
+        password,
+        password_confirmation,
+        role
+      };
 
-      const response = await axios.post('/register', formData);
+      // Only include company fields if role is recruiter
+      if (role === 'recruiter') {
+        registrationData.company_name = company_name;
+        registrationData.company_description = company_description;
+      }
+
+      console.log('Registration data:', registrationData);
+
+      const response = await axios.post('/register', registrationData);
+      
       console.log('Registration response:', response.data);
       
       if (response.data.status === 'success') {
-        // Check if token exists in response
-        if (response.data.data.token) {
-          localStorage.setItem('token', response.data.data.token);
-        }
+        const { token } = response.data.data;
+        localStorage.setItem('token', token);
         setUser(response.data.data.user);
         return { success: true };
       }
-      return { success: false, error: response.data.message };
+      return { success: false, message: response.data.message };
     } catch (error) {
-      console.error('Registration error:', error);
-      
+      console.error('Registration error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+
       // Handle network errors
       if (!error.response) {
-        const errorMessage = 'Network error. Please check your connection.';
-        setError(errorMessage);
-        return { success: false, error: errorMessage };
+        setError('Network error. Please check your connection.');
+        return { success: false, message: 'Network error. Please check your connection.' };
       }
 
       // Handle validation errors
@@ -125,31 +111,34 @@ export const AuthProvider = ({ children }) => {
           .flat()
           .join(', ');
         setError(errorMessage);
-        return { success: false, error: errorMessage };
+        return { success: false, message: errorMessage };
       }
 
       // Handle server errors
       if (error.response.status === 500) {
         const errorMessage = error.response.data.message || 'Server error occurred';
         setError(errorMessage);
-        return { success: false, error: errorMessage };
+        return { success: false, message: errorMessage };
       }
 
       // Handle other errors
       const errorMessage = error.response.data?.message || 'Registration failed';
       setError(errorMessage);
-      return { success: false, error: errorMessage };
+      return { success: false, message: errorMessage };
     }
   };
 
   const logout = async () => {
     try {
+      setError(null);
       await axios.post('/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
       localStorage.removeItem('token');
       setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.removeItem('token');
+      setUser(null);
+      setError('Logout failed');
     }
   };
 

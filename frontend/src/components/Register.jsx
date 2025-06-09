@@ -9,6 +9,9 @@ const Register = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
+    const [role, setRole] = useState('job_seeker');
+    const [companyName, setCompanyName] = useState('');
+    const [companyDescription, setCompanyDescription] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { register } = useAuth();
@@ -20,7 +23,15 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-            const response = await register(name, email, password, passwordConfirmation);
+            const response = await register(
+                name,
+                email,
+                password,
+                passwordConfirmation,
+                role,
+                role === 'recruiter' ? companyName : null,
+                role === 'recruiter' ? companyDescription : null
+            );
             if (response.success) {
                 navigate('/dashboard');
             } else {
@@ -71,6 +82,49 @@ const Register = () => {
                             required
                         />
                     </div>
+
+                    <div className="form-group">
+                        <label htmlFor="role" className="label">I am a</label>
+                        <select
+                            id="role"
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="input"
+                            required
+                        >
+                            <option value="job_seeker">Job Seeker</option>
+                            <option value="recruiter">Recruiter</option>
+                        </select>
+                    </div>
+
+                    {role === 'recruiter' && (
+                        <>
+                            <div className="form-group">
+                                <label htmlFor="companyName" className="label">Company Name</label>
+                                <input
+                                    type="text"
+                                    id="companyName"
+                                    value={companyName}
+                                    onChange={(e) => setCompanyName(e.target.value)}
+                                    className="input"
+                                    placeholder="Enter your company name"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="companyDescription" className="label">Company Description</label>
+                                <textarea
+                                    id="companyDescription"
+                                    value={companyDescription}
+                                    onChange={(e) => setCompanyDescription(e.target.value)}
+                                    className="input"
+                                    placeholder="Enter your company description"
+                                    rows="3"
+                                />
+                            </div>
+                        </>
+                    )}
 
                     <div className="form-group">
                         <label htmlFor="password" className="label">Password</label>

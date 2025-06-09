@@ -7,6 +7,7 @@ use App\Http\Controllers\PublicController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\ResumeController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,4 +48,10 @@ Route::middleware(['auth:api', 'jwt.auth'])->group(function () {
     // Resume routes
     Route::apiResource('resumes', ResumeController::class);
     Route::get('resumes/{resume}/download', [ResumeController::class, 'download']);
+
+    // Profile routes
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
+
+    // Job routes
+    Route::post('jobs/{job}/apply', [JobController::class, 'apply']);
 });

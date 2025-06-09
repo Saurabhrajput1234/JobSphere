@@ -44,11 +44,12 @@ export const AuthProvider = ({ children }) => {
         try {
             setError(null);
             const response = await axios.post('/login', { email, password });
+            console.log('Login response:', response.data);
             
             if (response.data.status === 'success') {
-                const { token } = response.data.data;
+                const { token, user } = response.data;
                 localStorage.setItem('token', token);
-                setUser(response.data.data.user);
+                setUser(user);
                 return { success: true };
             }
             return { success: false, message: response.data.message };
@@ -60,22 +61,26 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const register = async (name, email, password, password_confirmation) => {
+    const register = async (name, email, password, password_confirmation, role, company_name, company_description) => {
         try {
             setError(null);
-            console.log('Registration data:', {
+            const registrationData = {
                 name,
                 email,
                 password,
-                password_confirmation
-            });
+                password_confirmation,
+                role
+            };
 
-            const response = await axios.post('/register', {
-                name,
-                email,
-                password,
-                password_confirmation
-            });
+            // Only include company fields if role is recruiter
+            if (role === 'recruiter') {
+                registrationData.company_name = company_name;
+                registrationData.company_description = company_description;
+            }
+
+            console.log('Registration data:', registrationData);
+
+            const response = await axios.post('/register', registrationData);
             
             console.log('Registration response:', response.data);
             
