@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import axios from '../../utils/axios';
 
 const CompanyDashboard = () => {
   const navigate = useNavigate();
@@ -42,29 +43,14 @@ const CompanyDashboard = () => {
     try {
       setLoading(true);
       const [jobsRes, applicationsRes] = await Promise.all([
-        fetch('/api/jobs/company', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }),
-        fetch('/api/applications/company', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }),
+        axios.get('/jobs/company'),
+        axios.get('/applications/company'),
       ]);
 
-      const jobsData = await jobsRes.json();
-      const applicationsData = await applicationsRes.json();
-
-      if (jobsRes.ok) {
-        setJobs(jobsData);
-      }
-      if (applicationsRes.ok) {
-        setApplications(applicationsData);
-      }
+      setJobs(jobsRes.data);
+      setApplications(applicationsRes.data);
     } catch (err) {
-      setError('An error occurred while fetching data');
+      setError(err.response?.data?.message || 'An error occurred while fetching data');
     } finally {
       setLoading(false);
     }
@@ -76,20 +62,10 @@ const CompanyDashboard = () => {
 
   const handleApplicationStatus = async (applicationId, status) => {
     try {
-      const response = await fetch(`/api/applications/${applicationId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (response.ok) {
-        fetchCompanyData();
-      }
+      await axios.put(`/applications/${applicationId}/status`, { status });
+      fetchCompanyData();
     } catch (err) {
-      setError('Failed to update application status');
+      setError(err.response?.data?.message || 'Failed to update application status');
     }
   };
 
@@ -138,60 +114,46 @@ const CompanyDashboard = () => {
 
       {activeTab === 0 && (
         <Grid container spacing={3}>
-          {jobs.length === 0 ? (
-            <Grid item xs={12}>
-              <Alert severity="info">
-                You haven't posted any jobs yet. Click the button below to post your first job!
-              </Alert>
+          {jobs.map((job) => (
+            <Grid item xs={12} md={6} key={job.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {job.title}
+                  </Typography>
+                  <Typography color="textSecondary" gutterBottom>
+                    {job.location} • {job.type}
+                  </Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <Chip
+                      label={job.status}
+                      color={job.status === 'active' ? 'success' : 'default'}
+                      size="small"
+                      sx={{ mr: 1 }}
+                    />
+                    <Chip label={job.category} size="small" />
+                  </Box>
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      sx={{ mr: 1 }}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => navigate(`/jobs/${job.id}/edit`)}
+                    >
+                      Edit
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
             </Grid>
-          ) : (
-            jobs.map((job) => (
-              <Grid item xs={12} key={job.id}>
-                <Card>
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={8}>
-                        <Typography variant="h6" component="h2">
-                          {job.title}
-                        </Typography>
-                        <Box sx={{ mt: 1 }}>
-                          <Chip
-                            label={job.type}
-                            size="small"
-                            sx={{ mr: 1 }}
-                          />
-                          <Chip
-                            label={job.location}
-                            size="small"
-                            sx={{ mr: 1 }}
-                          />
-                          <Chip
-                            label={`${job.applications_count} Applications`}
-                            size="small"
-                          />
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                        <Button
-                          variant="contained"
-                          onClick={() => navigate(`/jobs/${job.id}`)}
-                          sx={{ mr: 1 }}
-                        >
-                          View Job
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          onClick={() => navigate(`/jobs/${job.id}/edit`)}
-                        >
-                          Edit
-                        </Button>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          )}
+          ))}
           <Grid item xs={12}>
             <Button
               variant="contained"
@@ -218,73 +180,56 @@ const CompanyDashboard = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {applications.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    <Alert severity="info">
-                      No applications received yet.
-                    </Alert>
+              {applications.map((application) => (
+                <TableRow key={application.id}>
+                  <TableCell>{application.job_seeker.name}</TableCell>
+                  <TableCell>{application.job.title}</TableCell>
+                  <TableCell>
+                    {new Date(application.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={application.status}
+                      color={
+                        application.status === 'accepted'
+                          ? 'success'
+                          : application.status === 'rejected'
+                          ? 'error'
+                          : 'default'
+                      }
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="small"
+                      onClick={() => navigate(`/applications/${application.id}`)}
+                      sx={{ mr: 1 }}
+                    >
+                      View
+                    </Button>
+                    {application.status === 'pending' && (
+                      <>
+                        <Button
+                          size="small"
+                          color="success"
+                          onClick={() => handleApplicationStatus(application.id, 'accepted')}
+                          sx={{ mr: 1 }}
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          onClick={() => handleApplicationStatus(application.id, 'rejected')}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
-              ) : (
-                applications.map((application) => (
-                  <TableRow key={application.id}>
-                    <TableCell>
-                      <Typography variant="subtitle2">
-                        {application.user.name}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {application.user.email}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{application.job.title}</TableCell>
-                    <TableCell>
-                      {new Date(application.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={application.status}
-                        color={
-                          application.status === 'accepted'
-                            ? 'success'
-                            : application.status === 'rejected'
-                            ? 'error'
-                            : 'default'
-                        }
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        onClick={() => navigate(`/applications/${application.id}`)}
-                        sx={{ mr: 1 }}
-                      >
-                        View
-                      </Button>
-                      {application.status === 'pending' && (
-                        <>
-                          <Button
-                            size="small"
-                            color="success"
-                            onClick={() => handleApplicationStatus(application.id, 'accepted')}
-                            sx={{ mr: 1 }}
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            size="small"
-                            color="error"
-                            onClick={() => handleApplicationStatus(application.id, 'rejected')}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              ))}
             </TableBody>
           </Table>
         </TableContainer>

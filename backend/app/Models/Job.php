@@ -27,6 +27,8 @@ class Job extends Model
 
     protected $casts = [
         'application_deadline' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function recruiter(): BelongsTo

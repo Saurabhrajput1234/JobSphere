@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -49,6 +50,8 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'last_login_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -68,7 +71,10 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getJWTCustomClaims(): array
     {
-        return [];
+        return [
+            'role' => $this->role,
+            'email' => $this->email
+        ];
     }
 
     /**
@@ -77,11 +83,11 @@ class User extends Authenticatable implements JWTSubject
      * @param string $ip
      * @return void
      */
-    public function updateLastLogin(string $ip): void
+    public function updateLastLogin($ip)
     {
         $this->update([
             'last_login_at' => now(),
-            'last_login_ip' => $ip,
+            'last_login_ip' => $ip
         ]);
     }
 

@@ -19,6 +19,7 @@ import {
   Link,
 } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import axios from '../../utils/axios';
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -30,35 +31,42 @@ const JobDetails = () => {
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [applicationData, setApplicationData] = useState({
     cover_letter: '',
+    resume_id: '',
   });
+  const [resumes, setResumes] = useState([]);
   const [applying, setApplying] = useState(false);
   const [applicationError, setApplicationError] = useState('');
 
   useEffect(() => {
     fetchJobDetails();
-  }, [id]);
+    if (user?.role === 'job_seeker') {
+      fetchResumes();
+    }
+  }, [id, user]);
 
   const fetchJobDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/jobs/${id}`);
-      const data = await response.json();
-
-      if (response.ok) {
-        setJob(data);
-      } else {
-        setError(data.message || 'Failed to fetch job details');
-      }
+      const response = await axios.get(`/jobs/${id}`);
+      setJob(response.data);
     } catch (err) {
-      setError('An error occurred while fetching job details');
+      setError(err.response?.data?.message || 'Failed to fetch job details');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchResumes = async () => {
+    try {
+      const response = await axios.get('/resumes');
+      setResumes(response.data);
+    } catch (err) {
+      console.error('Error fetching resumes:', err);
+    }
+  };
+
   const handleApplyClick = () => {
     if (!user) {
-      // Store the current job ID in sessionStorage for redirect after login
       sessionStorage.setItem('pendingJobApplication', id);
       navigate('/login');
       return;
@@ -71,25 +79,15 @@ const JobDetails = () => {
       setApplying(true);
       setApplicationError('');
 
-      const response = await fetch(`/api/jobs/${id}/apply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(applicationData),
+      const response = await axios.post('/applications', {
+        job_id: id,
+        ...applicationData,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setApplyDialogOpen(false);
-        navigate('/applications');
-      } else {
-        setApplicationError(data.message || 'Failed to submit application');
-      }
+      setApplyDialogOpen(false);
+      navigate('/dashboard');
     } catch (err) {
-      setApplicationError('An error occurred while submitting your application');
+      setApplicationError(err.response?.data?.message || 'Failed to submit application');
     } finally {
       setApplying(false);
     }
@@ -137,93 +135,62 @@ const JobDetails = () => {
             <Divider sx={{ my: 2 }} />
           </Grid>
 
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
-              Job Description
+              Description
             </Typography>
             <Typography variant="body1" paragraph>
               {job.description}
             </Typography>
+          </Grid>
 
+          <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
               Requirements
             </Typography>
             <Typography variant="body1" paragraph>
               {job.requirements}
             </Typography>
-
-            <Typography variant="h6" gutterBottom>
-              Benefits
-            </Typography>
-            <Typography variant="body1" paragraph>
-              {job.benefits}
-            </Typography>
           </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Paper elevation={2} sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Job Details
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="textSecondary">
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Details
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle1" color="textSecondary">
                   Salary Range
                 </Typography>
-                <Typography variant="body1">
-                  {job.salary_range}
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="textSecondary">
-                  Posted Date
-                </Typography>
-                <Typography variant="body1">
-                  {new Date(job.created_at).toLocaleDateString()}
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="textSecondary">
+                <Typography variant="body1">{job.salary_range}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle1" color="textSecondary">
                   Application Deadline
                 </Typography>
                 <Typography variant="body1">
-                  {new Date(job.deadline).toLocaleDateString()}
+                  {new Date(job.application_deadline).toLocaleDateString()}
                 </Typography>
-              </Box>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          {user?.role === 'job_seeker' && (
+            <Grid item xs={12}>
               <Button
                 variant="contained"
-                fullWidth
+                color="primary"
+                size="large"
                 onClick={handleApplyClick}
-                disabled={user?.role === 'recruiter'}
+                fullWidth
               >
-                {user?.role === 'recruiter' 
-                  ? 'Recruiters Cannot Apply' 
-                  : user 
-                    ? 'Apply Now' 
-                    : 'Login to Apply'}
+                Apply Now
               </Button>
-              {!user && (
-                <Box sx={{ mt: 2, textAlign: 'center' }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Don't have an account?{' '}
-                    <Link
-                      component="button"
-                      variant="body2"
-                      onClick={() => {
-                        sessionStorage.setItem('pendingJobApplication', id);
-                        navigate('/register');
-                      }}
-                    >
-                      Sign up here
-                    </Link>
-                  </Typography>
-                </Box>
-              )}
-            </Paper>
-          </Grid>
+            </Grid>
+          )}
         </Grid>
       </Paper>
 
-      {/* Application Dialog */}
       <Dialog open={applyDialogOpen} onClose={() => setApplyDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Apply for {job.title}</DialogTitle>
         <DialogContent>
@@ -232,23 +199,38 @@ const JobDetails = () => {
               {applicationError}
             </Alert>
           )}
-          <TextField
-            fullWidth
-            multiline
-            rows={6}
-            label="Cover Letter"
-            value={applicationData.cover_letter}
-            onChange={(e) => setApplicationData({ ...applicationData, cover_letter: e.target.value })}
-            margin="normal"
-            required
-          />
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              select
+              fullWidth
+              label="Select Resume"
+              value={applicationData.resume_id}
+              onChange={(e) => setApplicationData({ ...applicationData, resume_id: e.target.value })}
+              sx={{ mb: 2 }}
+            >
+              {resumes.map((resume) => (
+                <MenuItem key={resume.id} value={resume.id}>
+                  {resume.title}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label="Cover Letter"
+              value={applicationData.cover_letter}
+              onChange={(e) => setApplicationData({ ...applicationData, cover_letter: e.target.value })}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setApplyDialogOpen(false)}>Cancel</Button>
           <Button
             onClick={handleApplicationSubmit}
             variant="contained"
-            disabled={applying || !applicationData.cover_letter}
+            color="primary"
+            disabled={applying || !applicationData.resume_id}
           >
             {applying ? 'Submitting...' : 'Submit Application'}
           </Button>

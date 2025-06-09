@@ -46,6 +46,13 @@ const Register = () => {
     setLoading(true);
 
     try {
+      // Validate required fields based on role
+      if (formData.role === 'recruiter' && !formData.company_name) {
+        setError('Company name is required for recruiters');
+        setLoading(false);
+        return;
+      }
+
       const result = await register(formData);
       if (result.success) {
         // Check for pending job application
@@ -54,7 +61,12 @@ const Register = () => {
           sessionStorage.removeItem('pendingJobApplication');
           navigate(`/jobs/${pendingJobId}`);
         } else {
-          navigate('/');
+          // Redirect based on role
+          if (formData.role === 'recruiter') {
+            navigate('/company/dashboard');
+          } else {
+            navigate('/dashboard');
+          }
         }
       } else {
         setError(result.error);
@@ -165,27 +177,17 @@ const Register = () => {
             type="submit"
             fullWidth
             variant="contained"
-            size="large"
+            color="primary"
             disabled={loading}
             sx={{ mt: 3 }}
           >
-            {loading ? (
-              <>
-                <CircularProgress size={24} sx={{ mr: 1 }} />
-                Registering...
-              </>
-            ) : (
-              'Register'
-            )}
+            {loading ? <CircularProgress size={24} /> : 'Register'}
           </Button>
 
           <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Typography variant="body2">
-              Already have an account?{' '}
-              <Link component={RouterLink} to="/login">
-                Login here
-              </Link>
-            </Typography>
+            <Link component={RouterLink} to="/login" variant="body2">
+              Already have an account? Sign in
+            </Link>
           </Box>
         </form>
       </Paper>

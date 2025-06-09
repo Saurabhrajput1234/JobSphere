@@ -6,6 +6,7 @@ use App\Models\Job;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class JobController extends Controller
 {
@@ -54,8 +55,11 @@ class JobController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $data = $request->all();
+        $data['application_deadline'] = Carbon::parse($data['application_deadline']);
+        
         $job = Job::create([
-            ...$request->all(),
+            ...$data,
             'recruiter_id' => Auth::id(),
             'company_name' => Auth::user()->company_name,
         ]);
@@ -90,7 +94,12 @@ class JobController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $job->update($request->all());
+        $data = $request->all();
+        if (isset($data['application_deadline'])) {
+            $data['application_deadline'] = Carbon::parse($data['application_deadline']);
+        }
+
+        $job->update($data);
         return response()->json($job);
     }
 

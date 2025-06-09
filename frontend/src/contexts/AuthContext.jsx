@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../utils/axios';
 
 const AuthContext = createContext(null);
 
@@ -24,14 +24,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const response = await axios.get('/api/user');
-        setUser(response.data);
+        const response = await axios.get('/user');
+        setUser(response.data.data.user);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
     } finally {
       setLoading(false);
     }
@@ -39,44 +37,118 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (formData) => {
     try {
-      const response = await axios.post('/api/login', formData);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      return { success: true };
+      setError(null);
+      console.log('Login data:', formData);
+
+      const response = await axios.post('/login', formData);
+      console.log('Login response:', response.data);
+      
+      if (response.data.status === 'success') {
+        const { token, user } = response.data.data;
+        localStorage.setItem('token', token);
+        setUser(user);
+        return { success: true };
+      }
+      return { success: false, error: response.data.message };
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Login failed',
-      };
+      console.error('Login error:', error);
+      
+      // Handle network errors
+      if (!error.response) {
+        const errorMessage = 'Network error. Please check your connection.';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      // Handle validation errors
+      if (error.response.status === 422) {
+        const validationErrors = error.response.data.errors;
+        const errorMessage = Object.values(validationErrors)
+          .flat()
+          .join(', ');
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      // Handle authentication errors
+      if (error.response.status === 401) {
+        const errorMessage = error.response.data.message || 'Invalid credentials';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      // Handle server errors
+      if (error.response.status === 500) {
+        const errorMessage = error.response.data.message || 'Server error occurred';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      // Handle other errors
+      const errorMessage = error.response.data?.message || 'Login failed';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     }
   };
 
   const register = async (formData) => {
     try {
-      const response = await axios.post('/api/register', formData);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      return { success: true };
+      setError(null);
+      console.log('Registration data:', formData);
+
+      const response = await axios.post('/register', formData);
+      console.log('Registration response:', response.data);
+      
+      if (response.data.status === 'success') {
+        // Check if token exists in response
+        if (response.data.data.token) {
+          localStorage.setItem('token', response.data.data.token);
+        }
+        setUser(response.data.data.user);
+        return { success: true };
+      }
+      return { success: false, error: response.data.message };
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Registration failed',
-      };
+      console.error('Registration error:', error);
+      
+      // Handle network errors
+      if (!error.response) {
+        const errorMessage = 'Network error. Please check your connection.';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      // Handle validation errors
+      if (error.response.status === 422) {
+        const validationErrors = error.response.data.errors;
+        const errorMessage = Object.values(validationErrors)
+          .flat()
+          .join(', ');
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      // Handle server errors
+      if (error.response.status === 500) {
+        const errorMessage = error.response.data.message || 'Server error occurred';
+        setError(errorMessage);
+        return { success: false, error: errorMessage };
+      }
+
+      // Handle other errors
+      const errorMessage = error.response.data?.message || 'Registration failed';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     }
   };
 
   const logout = async () => {
     try {
-      await axios.post('/api/logout');
+      await axios.post('/logout');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
       setUser(null);
     }
   };

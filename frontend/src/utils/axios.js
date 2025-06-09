@@ -1,14 +1,15 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-    }
+    },
+    withCredentials: true
 });
 
-// Add a request interceptor
+// Request interceptor
 instance.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -22,39 +23,39 @@ instance.interceptors.request.use(
     }
 );
 
-// Add a response interceptor
+// Response interceptor
 instance.interceptors.response.use(
-    (response) => {
-        return response;
-    },
+    (response) => response,
     (error) => {
-        // Handle network errors
-        if (!error.response) {
-            console.error('Network Error:', error.message);
-            return Promise.reject(new Error('Network error. Please check your connection.'));
+        if (error.response) {
+            // Handle specific error cases
+            switch (error.response.status) {
+                case 401:
+                    // Unauthorized - clear token and redirect to login
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                    break;
+                case 403:
+                    // Forbidden - show access denied message
+                    console.error('Access denied');
+                    break;
+                case 422:
+                    // Validation error - handled by form components
+                    break;
+                case 500:
+                    // Server error - show generic error message
+                    console.error('Server error occurred');
+                    break;
+                default:
+                    console.error('An error occurred:', error.response.data);
+            }
+        } else if (error.request) {
+            // Network error
+            console.error('Network error:', error.request);
+        } else {
+            // Other errors
+            console.error('Error:', error.message);
         }
-
-        // Handle unauthorized errors
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-            return Promise.reject(new Error('Session expired. Please login again.'));
-        }
-
-        // Handle validation errors
-        if (error.response?.status === 422) {
-            const errors = error.response.data.errors;
-            const errorMessage = Object.values(errors)
-                .flat()
-                .join(', ');
-            return Promise.reject(new Error(errorMessage));
-        }
-
-        // Handle server errors
-        if (error.response?.status === 500) {
-            return Promise.reject(new Error(error.response.data.message || 'Server error occurred'));
-        }
-
         return Promise.reject(error);
     }
 );

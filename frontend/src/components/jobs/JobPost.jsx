@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import axios from '../../utils/axios';
 
 const jobTypes = [
   'Full-time',
@@ -57,6 +58,19 @@ const requiredSkills = [
   'Agile',
 ];
 
+const validationSchema = Yup.object({
+  title: Yup.string().required('Job title is required'),
+  description: Yup.string().required('Job description is required'),
+  requirements: Yup.string().required('Job requirements are required'),
+  location: Yup.string().required('Job location is required'),
+  type: Yup.string().required('Job type is required'),
+  salary_range: Yup.string().required('Salary range is required'),
+  category: Yup.string().required('Job category is required'),
+  application_deadline: Yup.date()
+    .min(new Date(), 'Deadline must be in the future')
+    .required('Application deadline is required'),
+});
+
 const JobPost = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -66,66 +80,24 @@ const JobPost = () => {
   const formik = useFormik({
     initialValues: {
       title: '',
-      company: user?.company_name || '',
-      location: '',
-      type: '',
-      experienceLevel: '',
-      salary: '',
       description: '',
       requirements: '',
-      responsibilities: '',
-      benefits: '',
-      skills: [],
-      applicationDeadline: '',
+      location: '',
+      type: '',
+      salary_range: '',
+      category: '',
+      application_deadline: '',
     },
-    validationSchema: Yup.object({
-      title: Yup.string().required('Job title is required'),
-      company: Yup.string().required('Company name is required'),
-      location: Yup.string().required('Location is required'),
-      type: Yup.string().required('Job type is required'),
-      experienceLevel: Yup.string().required('Experience level is required'),
-      salary: Yup.string().required('Salary range is required'),
-      description: Yup.string()
-        .required('Job description is required')
-        .min(100, 'Description should be at least 100 characters'),
-      requirements: Yup.string()
-        .required('Requirements are required')
-        .min(50, 'Requirements should be at least 50 characters'),
-      responsibilities: Yup.string()
-        .required('Responsibilities are required')
-        .min(50, 'Responsibilities should be at least 50 characters'),
-      benefits: Yup.string()
-        .required('Benefits are required')
-        .min(50, 'Benefits should be at least 50 characters'),
-      skills: Yup.array()
-        .min(1, 'At least one skill is required')
-        .required('Skills are required'),
-      applicationDeadline: Yup.date()
-        .min(new Date(), 'Deadline must be in the future')
-        .required('Application deadline is required'),
-    }),
+    validationSchema,
     onSubmit: async (values) => {
       setLoading(true);
       setError('');
 
       try {
-        const response = await fetch('/api/jobs', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(values),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to post job');
-        }
-
-        const data = await response.json();
-        navigate(`/jobs/${data.id}`);
+        const response = await axios.post('/jobs', values);
+        navigate(`/jobs/${response.data.id}`);
       } catch (err) {
-        setError(err.message || 'Failed to post job');
+        setError(err.response?.data?.message || 'Failed to post job');
       } finally {
         setLoading(false);
       }
@@ -175,130 +147,6 @@ const JobPost = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Company Name"
-                  name="company"
-                  value={formik.values.company}
-                  onChange={formik.handleChange}
-                  error={formik.touched.company && Boolean(formik.errors.company)}
-                  helperText={formik.touched.company && formik.errors.company}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Location"
-                  name="location"
-                  value={formik.values.location}
-                  onChange={formik.handleChange}
-                  error={formik.touched.location && Boolean(formik.errors.location)}
-                  helperText={formik.touched.location && formik.errors.location}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth error={formik.touched.type && Boolean(formik.errors.type)}>
-                  <InputLabel>Job Type</InputLabel>
-                  <Select
-                    name="type"
-                    value={formik.values.type}
-                    onChange={formik.handleChange}
-                    label="Job Type"
-                  >
-                    {jobTypes.map((type) => (
-                      <MenuItem key={type} value={type}>
-                        {type}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <FormControl
-                  fullWidth
-                  error={formik.touched.experienceLevel && Boolean(formik.errors.experienceLevel)}
-                >
-                  <InputLabel>Experience Level</InputLabel>
-                  <Select
-                    name="experienceLevel"
-                    value={formik.values.experienceLevel}
-                    onChange={formik.handleChange}
-                    label="Experience Level"
-                  >
-                    {experienceLevels.map((level) => (
-                      <MenuItem key={level} value={level}>
-                        {level}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Salary Range"
-                  name="salary"
-                  value={formik.values.salary}
-                  onChange={formik.handleChange}
-                  error={formik.touched.salary && Boolean(formik.errors.salary)}
-                  helperText={formik.touched.salary && formik.errors.salary}
-                  placeholder="e.g., $50,000 - $70,000"
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Application Deadline"
-                  name="applicationDeadline"
-                  type="date"
-                  value={formik.values.applicationDeadline}
-                  onChange={formik.handleChange}
-                  error={
-                    formik.touched.applicationDeadline &&
-                    Boolean(formik.errors.applicationDeadline)
-                  }
-                  helperText={
-                    formik.touched.applicationDeadline && formik.errors.applicationDeadline
-                  }
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Autocomplete
-                  multiple
-                  options={requiredSkills}
-                  value={formik.values.skills}
-                  onChange={(event, newValue) => {
-                    formik.setFieldValue('skills', newValue);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Required Skills"
-                      error={formik.touched.skills && Boolean(formik.errors.skills)}
-                      helperText={formik.touched.skills && formik.errors.skills}
-                    />
-                  )}
-                  renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                      <Chip
-                        label={option}
-                        {...getTagProps({ index })}
-                        color="primary"
-                        variant="outlined"
-                      />
-                    ))
-                  }
-                />
-              </Grid>
-
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -317,7 +165,7 @@ const JobPost = () => {
                 <TextField
                   fullWidth
                   multiline
-                  rows={3}
+                  rows={4}
                   label="Requirements"
                   name="requirements"
                   value={formik.values.requirements}
@@ -327,36 +175,71 @@ const JobPost = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  multiline
-                  rows={3}
-                  label="Responsibilities"
-                  name="responsibilities"
-                  value={formik.values.responsibilities}
+                  label="Location"
+                  name="location"
+                  value={formik.values.location}
                   onChange={formik.handleChange}
-                  error={
-                    formik.touched.responsibilities &&
-                    Boolean(formik.errors.responsibilities)
-                  }
-                  helperText={
-                    formik.touched.responsibilities && formik.errors.responsibilities
-                  }
+                  error={formik.touched.location && Boolean(formik.errors.location)}
+                  helperText={formik.touched.location && formik.errors.location}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Job Type"
+                  name="type"
+                  value={formik.values.type}
+                  onChange={formik.handleChange}
+                  error={formik.touched.type && Boolean(formik.errors.type)}
+                  helperText={formik.touched.type && formik.errors.type}
+                >
+                  <MenuItem value="full-time">Full Time</MenuItem>
+                  <MenuItem value="part-time">Part Time</MenuItem>
+                  <MenuItem value="contract">Contract</MenuItem>
+                  <MenuItem value="internship">Internship</MenuItem>
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Salary Range"
+                  name="salary_range"
+                  value={formik.values.salary_range}
+                  onChange={formik.handleChange}
+                  error={formik.touched.salary_range && Boolean(formik.errors.salary_range)}
+                  helperText={formik.touched.salary_range && formik.errors.salary_range}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Category"
+                  name="category"
+                  value={formik.values.category}
+                  onChange={formik.handleChange}
+                  error={formik.touched.category && Boolean(formik.errors.category)}
+                  helperText={formik.touched.category && formik.errors.category}
                 />
               </Grid>
 
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  multiline
-                  rows={3}
-                  label="Benefits"
-                  name="benefits"
-                  value={formik.values.benefits}
+                  type="date"
+                  label="Application Deadline"
+                  name="application_deadline"
+                  value={formik.values.application_deadline}
                   onChange={formik.handleChange}
-                  error={formik.touched.benefits && Boolean(formik.errors.benefits)}
-                  helperText={formik.touched.benefits && formik.errors.benefits}
+                  error={formik.touched.application_deadline && Boolean(formik.errors.application_deadline)}
+                  helperText={formik.touched.application_deadline && formik.errors.application_deadline}
+                  InputLabelProps={{ shrink: true }}
                 />
               </Grid>
 
@@ -364,21 +247,12 @@ const JobPost = () => {
                 <Button
                   type="submit"
                   variant="contained"
+                  color="primary"
                   size="large"
+                  fullWidth
                   disabled={loading}
-                  sx={{
-                    py: 1.5,
-                    px: 4,
-                    fontSize: '1.1rem',
-                    textTransform: 'none',
-                    borderRadius: 2,
-                  }}
                 >
-                  {loading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    'Post Job'
-                  )}
+                  {loading ? 'Posting...' : 'Post Job'}
                 </Button>
               </Grid>
             </Grid>

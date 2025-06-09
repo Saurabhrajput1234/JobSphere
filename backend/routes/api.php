@@ -30,7 +30,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/users', [PublicController::class, 'getAllUsers']);
 
 // Protected routes
-Route::middleware('auth:api')->group(function () {
+Route::middleware(['auth:api', 'jwt.auth'])->group(function () {
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
