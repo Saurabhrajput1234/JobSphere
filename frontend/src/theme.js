@@ -135,6 +135,13 @@ const theme = createTheme({
         },
       },
     },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          maxWidth: '100% !important',
+        },
+      },
+    },
   },
 });
 
