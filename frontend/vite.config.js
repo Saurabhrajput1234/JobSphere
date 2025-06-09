@@ -9,12 +9,7 @@ export default defineConfig({
       '@': '/src',
     },
   },
-  build: {
-    rollupOptions: {
-      external: ['@mui/material', '@emotion/react', '@emotion/styled'],
-    },
-  },
   optimizeDeps: {
-    include: ['@mui/material', '@emotion/react', '@emotion/styled'],
+    include: ['@mui/material', '@emotion/react', '@emotion/styled', '@mui/icons-material'],
   },
 })
